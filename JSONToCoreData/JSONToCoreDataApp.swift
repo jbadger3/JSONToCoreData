@@ -15,6 +15,7 @@ struct JSONToCoreDataApp: App {
         WindowGroup {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .environmentObject(persistenceController)
         }
     }
 }

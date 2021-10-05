@@ -10,76 +10,61 @@ import CoreData
 
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @EnvironmentObject var persistenceController: PersistenceController
 
     @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
+        sortDescriptors: [NSSortDescriptor(keyPath: \Post.id, ascending: true)],
         animation: .default)
-    private var items: FetchedResults<Item>
+    private var posts: FetchedResults<Post>
 
     var body: some View {
         NavigationView {
             List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp!, formatter: itemFormatter)")
-                    } label: {
-                        Text(item.timestamp!, formatter: itemFormatter)
-                    }
+                ForEach(posts) { post in
+                    NavigationLink(
+                        destination: {
+                            Text(post.body ?? "")
+                        },
+                        label: {
+                            VStack(alignment: .leading) {
+                                HStack {
+                                    Text(post.title ?? "")
+                                        .fontWeight(.bold)
+                                }.padding(.bottom, 3)
+                                HStack {
+                                    Text("id:")
+                                        .fontWeight(.semibold)
+                                        .font(.caption)
+                                    Text(String(post.id))
+                                        .font(.caption)
+                                    Text("userId:")
+                                        .fontWeight(.semibold)
+                                        .font(.caption)
+                                    Text(String(post.userId))
+                                        .font(.caption)
+                                }
+                            }
+                        })
                 }
-                .onDelete(perform: deleteItems)
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-            Text("Select an item")
+            .toolbar(content: {
+                Button(action: {self.updateDatabase()}, label: {Text("Refresh Posts")})
+            })
         }
+        .onAppear(perform: {self.updateDatabase()})
     }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+    func updateDatabase() {
+        persistenceController.updateDatabase(completion: { success, error in
+            //TODO notify user/handle errors
+            if success {
+                print("Updated database successfully")
+            } else if let error = error {
+                print(error.localizedDescription)
             }
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            offsets.map { items[$0] }.forEach(viewContext.delete)
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
-        }
+        })
     }
 }
 
-private let itemFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .medium
-    return formatter
-}()
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
